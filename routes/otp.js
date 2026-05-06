@@ -4,15 +4,15 @@ const router = express.Router();
 const redis = require("../services/redis");
 const { generateOTP, hashOTP } = require("../utils/otp");
 
-//Ignore for now
-/*/ Middleware: API key check
+
+//Middleware: API key check
 router.use((req, res, next) => {
   if (req.headers["x-api-key"] !== process.env.API_KEY) {
     return res.status(403).json({ error: "Unauthorized" });
   }
   next();
 });
-*/
+
 
 // Send OTP
 router.post("/send-otp", async (req, res) => {
@@ -26,7 +26,10 @@ router.post("/send-otp", async (req, res) => {
   const hashed = hashOTP(otp);
 
   await redis.set(`otp:${phone}`, hashed, "EX", 300);
-  console.log(phone, hashed);
+  //REMOVE, test only
+  console.log(otp, hashed);
+  res.json({ success: true, message: "OTP created" });
+  //disabled for now
   /*
   try {
     await sendSMS(phone, otp);
