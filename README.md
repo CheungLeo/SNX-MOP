@@ -1,5 +1,5 @@
 # OTP Middleware (SurveyCake + AccessYou)
-
+Info: The following guide is LLM-generated, there may be inaccuracies
 ## System Overview
 
 This service provides: - OTP SMS sending via AccessYou API - OTP
