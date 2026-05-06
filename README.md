@@ -200,7 +200,7 @@ curl -X POST https://yourdomain.com/api/surveycake/send-otp   -H "Content-Type: 
 curl -X POST https://yourdomain.com/api/surveycake/verify-otp   -H "Content-Type: application/json"   -H "x-api-key: your-secure-api-key"   -d '{"phone":"+85291234567","otp":"123456"}'
 ```
 
-# 🏁 Checklist
+# Checklist
 
 -   Domain working
 -   HTTPS enabled
