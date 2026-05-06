@@ -21,7 +21,12 @@ router.post("/send-otp", async (req, res) => {
   if (!phone) {
     return res.status(400).json({ error: "Missing field: phone number" });
   }
-
+  //verify phone format, remove +852 prefix if exists, remove spaces and dashes, check if 8 digits in hong kong format
+  const cleaned = phone.replace(/^\+852/, "").replace(/[\s-]/g, "");
+    if (!/^\d{8}$/.test(cleaned)) {
+        return res.status(400).json({ error: "Invalid phone number format" });
+    }
+    
   const otp = generateOTP();
   const hashed = hashOTP(otp);
 
