@@ -1,5 +1,9 @@
 # OTP Middleware (SurveyCake + AccessYou)
-Info: The following guide is LLM-generated, there may be inaccuracies
+Note: 
+1. The following guide is LLM-generated, there may be inaccuracies
+2. routes/otp.js : otp are being printed to console for testing purposes, remove the line when deploy to production
+3. routes/otp.js : api calls to accessforyou are currently disabled, please re-enable it when the feature needs to be tested
+
 ## System Overview
 
 This service provides: - OTP SMS sending via AccessYou API - OTP
