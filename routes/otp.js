@@ -26,22 +26,30 @@ router.post("/send-otp", async (req, res) => {
     if (!/^\d{8}$/.test(cleaned)) {
         return res.status(400).json({ error: "Invalid phone number format" });
     }
-    
-  const otp = generateOTP();
-  const hashed = hashOTP(otp);
 
-  await redis.set(`otp:${phone}`, hashed, "EX", 300);
-  //REMOVE, test only
-  console.log(otp, hashed);
-  res.json({ success: true, message: "OTP created" });
-  //disabled for now, accessyou sms API calling, ip not yet added to whitelist
-  /*
-  try {
-    await sendSMS(phone, otp);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: "SMS failed" });
-  }*/
+    // check if OTP already exists for this phone number
+    const existing = await redis.get(`otp:${cleaned}`);
+    if (existing) {
+        return res.status(429).json({ error: "OTP already sent, please wait" });
+    }
+
+    //if not, generate OTP, hash it and store in redis with expiry of 5 minutes
+    const otp = generateOTP();
+    const hashed = hashOTP(otp);
+
+    //Sends the cleaned version NOTE: verify what format the accessyou API expects, if it needs +852 prefix or not
+    await redis.set(`otp:${cleaned}`, hashed, "EX", 300);
+    //REMOVE, test only
+    console.log(otp, hashed);
+    res.json({ success: true, message: "OTP created" });
+    //disabled for now, accessyou sms API calling, ip not yet added to whitelist
+    /*
+    try {
+        await sendSMS(phone, otp);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "SMS failed" });
+    }*/
 });
 
 // Verify OTP
