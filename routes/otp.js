@@ -29,7 +29,7 @@ router.post("/send-otp", async (req, res) => {
   //REMOVE, test only
   console.log(otp, hashed);
   res.json({ success: true, message: "OTP created" });
-  //disabled for now
+  //disabled for now, accessyou sms API calling, ip not yet added to whitelist
   /*
   try {
     await sendSMS(phone, otp);
