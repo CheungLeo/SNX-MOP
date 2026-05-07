@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  nginx:
+    image: nginx:latest
+    container_name: otp-nginx
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+
+  app:
+    build: .
+    container_name: otp-app
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7
+    container_name: otp-redis
+    restart: always
