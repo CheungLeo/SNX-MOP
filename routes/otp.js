@@ -4,6 +4,8 @@ const router = express.Router();
 const redis = require("../services/redis");
 const { generateOTP, hashOTP } = require("../utils/otp");
 
+const { cleanPhone, validatePhone } = require("../utils/phone");
+
 
 //Middleware: API key check
 router.use((req, res, next) => {
@@ -22,10 +24,10 @@ router.post("/send-otp", async (req, res) => {
     return res.status(400).json({ error: "Missing field: phone number" });
   }
   //verify phone format, remove +852 prefix if exists, remove spaces and dashes, check if 8 digits in hong kong format
-  const cleaned = phone.replace(/^\+852/, "").replace(/[\s-]/g, "");
-    if (!/^\d{8}$/.test(cleaned)) {
-        return res.status(400).json({ error: "Invalid phone number format" });
-    }
+  const cleaned = cleanPhone(phone);
+  if (!validatePhone(cleaned)) {
+    return res.status(400).json({ error: "Invalid phone number format" });
+  }
 
     // check if OTP already exists for this phone number
     const existing = await redis.get(`otp:${cleaned}`);
@@ -39,13 +41,14 @@ router.post("/send-otp", async (req, res) => {
 
     //Sends the cleaned version NOTE: verify what format the accessyou API expects, if it needs +852 prefix or not
     await redis.set(`otp:${cleaned}`, hashed, "EX", 300);
-    //REMOVE, test only
-    console.log(otp, hashed);
-    res.json({ success: true, message: "OTP created" });
+
+    // temp testing response, remove in production, only for development purposes
+    //res.json({ success: true, message: "OTP created"}); include otp in message
+    res.json({ success: true, message: `OTP has been created: ${otp}` });
     //disabled for now, accessyou sms API calling, ip not yet added to whitelist
     /*
     try {
-        await sendSMS(phone, otp);
+        await sendSMS(cleaned, otp);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: "SMS failed" });
@@ -56,7 +59,13 @@ router.post("/send-otp", async (req, res) => {
 router.post("/verify-otp", async (req, res) => {
   const { phone, otp } = req.body;
 
-  const stored = await redis.get(`otp:${phone}`);
+  const cleaned = cleanPhone(phone);
+  if (!validatePhone(cleaned)) {
+    return res.status(400).json({ error: "Invalid phone number format" });
+  }
+
+  const stored = await redis.get(`otp:${cleaned}`);
+
 
   if (!stored) {
     return res.json({ success: false, message: "Expired or not found" });
