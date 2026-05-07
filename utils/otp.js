@@ -1,3 +1,7 @@
+/*Module:
+generateOTP: generate 6 digit otp
+hashOTP: hash generated otp to be stored in db
+*/
 const crypto = require("crypto");
 
 function generateOTP() {
