@@ -39,28 +39,23 @@ router.post("/send-otp", async (req, res) => {
     return res.status(400).json({ msg: "OTP already sent, please wait" });
   }
 
-  //if not, generate OTP hash
+  //Generate OTP and hash it
   const otp = generateOTP();
   const hashed = hashOTP(otp);
 
-  //Two redis sotre, one with hashed otp as key, other with phone as key, both with same value, the hash of otp, and same expiration time, atomic operation, if one fails, both fail, to ensure consistency, set nx to prevent overwriting existing OTPs, and set expiration to 5 minutes
+  //TODO: check for otp collision
+  
+  /*
+  Store the hashed OTP in Redis with a key that allows us to look up the phone number later, 
+  and also store the phone number with a key that allows us to look up the hashed OTP. Set an expiration time of 5 minutes (300 seconds) 
+  Two keys were used due to constraints from surveycake
+  */
   const multi = redis.multi();
-  multi.set(`otp:${cleaned}`, hashed, "EX", 300, "NX");
   multi.set(`otpHash:${hashed}`, cleaned, "EX", 300, "NX");
+  multi.set(`otp:${cleaned}`, hashed, "EX", 300, "NX");
   const results = await multi.exec();
 
-  if (
-  results === null ||
-  results.some(result => result[0] !== null)
-) {
-  return res.status(500).json({
-    msg: "Failed to store OTP"
-  });
-}
-  // temp testing response, remove in production, only for development purposes
-  //res.json({ success: true, message: "OTP created"}); include otp in message
-  res.status(200).json({ msg: `OTP created: ${otp}` });
-  //disabled for now, accessyou sms API calling, ip not yet added to whitelist
+  //disabled for now, accessyou sms API calling, IP not yet added to whitelist
   /*
   try {
       await sendSMS(cleaned, otp);
@@ -68,6 +63,10 @@ router.post("/send-otp", async (req, res) => {
   } catch (err) {
       res.status(500).json({ error: "SMS failed" });
   }*/
+
+  // temp testing response, remove in production, only for development purposes
+  //res.json({ success: true, message: "OTP created"});
+  res.status(200).json({ msg: `OTP created: ${otp}` });
 });
 
 // Verify OTP
