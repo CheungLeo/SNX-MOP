@@ -4,7 +4,6 @@ const router = express.Router();
 const redis = require("../services/redis");
 const pool = require("../services/postgres");
 const { generateOTP, hashOTP } = require("../utils/otp");
-
 const { cleanPhone, validatePhone } = require("../utils/phone");
 
 // Send OTP
@@ -84,7 +83,7 @@ router.post("/verify-otp", async (req, res) => {
   }
 
   // Hash the phone number to check against verified list
-  const phoneHash = hashOTP(phone); // Reuse hashOTP; consider a dedicated hash if needed
+  const phoneHash = hashOTP(phone); //reuse hashotp
 
   // Check if this phone is already verified (prevent re-verification)
   const verifiedCheck = await pool.query('SELECT id FROM verified_phone_numbers WHERE phone_hash = $1', [phoneHash]);

@@ -1,3 +1,6 @@
+/*
+  * This module sets up a connection pool to a PostgreSQL database to store verified phone numbers.
+*/
 const { Pool } = require('pg');
 
 const pool = new Pool({
