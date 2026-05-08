@@ -5,109 +5,83 @@ const redis = require("../services/redis");
 const pool = require("../services/postgres");
 const { generateOTP, hashOTP } = require("../utils/otp");
 const { cleanPhone, validatePhone } = require("../utils/phone");
+const messages = require("../config/messages");
 
 // Send OTP
 router.post("/send-otp", async (req, res) => {
-  // expect body to have svHash and value, where value is the phone number
   const { svHash, value } = req.body;
   const phone = value;
 
-  //validate phone number presence
   if (!phone) {
-    return res.status(400).json({ msg: "Missing field: phone number" });
+    return res.status(400).json({ msg: messages.MISSING_FIELD_PHONE });
   }
 
-  //verify phone format
   const cleaned = cleanPhone(phone);
   if (!validatePhone(cleaned)) {
-    return res.status(400).json({ msg: "Invalid phone number format" });
+    return res.status(400).json({ msg: messages.INVALID_PHONE_FORMAT });
   }
 
-  // check if OTP already exists for this phone number
   const existing = await redis.get(`otp:${cleaned}`);
   if (existing) {
-    return res.status(400).json({ msg: "OTP already sent, please wait" });
+    return res.status(400).json({ msg: messages.OTP_ALREADY_SENT });
   }
 
-  //Generate OTP and hash it
   const otp = generateOTP();
   const hashed = hashOTP(otp);
 
-  //TODO: check for otp collision
-  
-  /*
-  Store the hashed OTP in Redis with a key that allows us to look up the phone number later, 
-  and also store the phone number with a key that allows us to look up the hashed OTP. Set an expiration time of 5 minutes (300 seconds) 
-  Two keys were used due to constraints from surveycake
-  */
   const multi = redis.multi();
   multi.set(`otpHash:${hashed}`, cleaned, "EX", 300, "NX");
   multi.set(`otp:${cleaned}`, hashed, "EX", 300, "NX");
-  const results = await multi.exec();
+  await multi.exec();
 
-  //disabled for now, accessyou sms API calling, IP not yet added to whitelist
-  /*
-  try {
-      await sendSMS(cleaned, otp);
-      res.json({ success: true });
-  } catch (err) {
-      res.status(500).json({ error: "SMS failed" });
-  }*/
-
-  // temp testing response, remove in production, only for development purposes
-  //res.json({ success: true, message: "OTP created"});
-  res.status(200).json({ msg: `OTP created: ${otp}` });
+  res.status(200).json({ msg: messages.OTP_CREATED(otp) });
 });
 
 // Verify OTP
 router.post("/verify-otp", async (req, res) => {
   const { svHash, value } = req.body;
   const otp = value;
-  
-  //validate otp presence
+
   if (!otp) {
-    return res.status(400).json({ msg: "Missing field: OTP" });
-  }
-  //validate otp format, should be 6 digits
-  if (!/^\d{6}$/.test(otp)) {
-    return res.status(400).json({ msg: "Invalid OTP format" });
+    return res.status(400).json({ msg: messages.MISSING_FIELD_OTP });
   }
 
-  //Hash the provided OTP and look up the phone number in Redis using the hashed OTP as the key
+  if (!/^\d{6}$/.test(otp)) {
+    return res.status(400).json({ msg: messages.INVALID_OTP_FORMAT });
+  }
+
   const hashed = hashOTP(otp);
   const phone = await redis.get(`otpHash:${hashed}`);
 
-  //If no phone number is found, the OTP is invalid or expired
   if (!phone) {
-    return res.status(400).json({ msg: "Invalid or expired OTP" });
+    return res.status(400).json({ msg: messages.INVALID_OR_EXPIRED_OTP });
   }
 
-  // Hash the phone number to check against verified list
-  const phoneHash = hashOTP(phone); //reuse hashotp
+  const phoneHash = hashOTP(phone);
 
-  // Check if this phone is already verified (prevent re-verification)
-  const verifiedCheck = await pool.query('SELECT id FROM verified_phone_numbers WHERE phone_hash = $1', [phoneHash]);
+  const verifiedCheck = await pool.query(
+    "SELECT id FROM verified_phone_numbers WHERE phone_hash = $1",
+    [phoneHash]
+  );
   if (verifiedCheck.rows.length > 0) {
-    return res.status(400).json({ msg: "Phone number already verified" });
+    return res.status(400).json({ msg: messages.PHONE_ALREADY_VERIFIED });
   }
 
-  //Verified, delete the OTP from Redis to prevent reuse, and return success response
-  //delete both keys to prevent reuse
   const multi = redis.multi();
   multi.del(`otp:${phone}`);
   multi.del(`otpHash:${hashed}`);
   await multi.exec();
 
-  // Insert the phone hash into PostgreSQL to mark as verified
   try {
-    await pool.query('INSERT INTO verified_phone_numbers (phone_hash) VALUES ($1) ON CONFLICT (phone_hash) DO NOTHING', [phoneHash]);
+    await pool.query(
+      "INSERT INTO verified_phone_numbers (phone_hash) VALUES ($1) ON CONFLICT (phone_hash) DO NOTHING",
+      [phoneHash]
+    );
   } catch (err) {
-    // Log error but don't fail the response, as verification succeeded
-    console.error('Failed to insert verified phone:', err);
+    console.error("Failed to insert verified phone:", err);
   }
 
-  //status 200, allows customer to proceed with form submission, frontend can use this response to trigger the next step in the flow
-  res.status(200).json({ msg: "OTP verified"});
+  res.status(200).json({ msg: messages.OTP_VERIFIED });
 });
 
 module.exports = router;
