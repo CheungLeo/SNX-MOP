@@ -6,16 +6,6 @@ const { generateOTP, hashOTP } = require("../utils/otp");
 
 const { cleanPhone, validatePhone } = require("../utils/phone");
 
-
-//Middleware: API key check
-router.use((req, res, next) => {
-  if (req.headers["x-api-key"] !== process.env.API_KEY) {
-    return res.status(403).json({ msg: "Unauthorized" });
-  }
-  next();
-});
-
-
 // Send OTP
 router.post("/send-otp", async (req, res) => {
   // expect body to have svHash and value, where value is the phone number
