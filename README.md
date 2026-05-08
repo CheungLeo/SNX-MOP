@@ -1,8 +1,10 @@
 # OTP Middleware (SurveyCake + AccessYou)
 Note: 
 1. The following guide is LLM-generated, there may be inaccuracies
-2. routes/otp.js : otp are being printed to console for testing purposes, remove the line when deploy to production
-3. routes/otp.js : api calls to accessforyou are currently disabled, please re-enable it when the feature needs to be tested
+
+#DEPRECIATED
+
+Readme is currently outdated, docker is implemented so the setup has changed, this readme will be updated soon
 
 ## System Overview
 
