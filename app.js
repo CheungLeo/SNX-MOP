@@ -1,9 +1,19 @@
 require("dotenv").config();
+const cors = require("cors");
 const express = require("express");
 
 const app = express();
 
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "x-api-key"]
+}));
+
+app.options("*", cors());
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 //debug log
 app.use((req, res, next) => {
