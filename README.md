@@ -2,7 +2,7 @@
 Note: 
 1. The following guide is LLM-generated, there may be inaccuracies
 
-#DEPRECIATED
+# DEPRECIATED
 
 Readme is currently outdated, docker is implemented so the setup has changed, this readme will be updated soon
 
