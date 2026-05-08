@@ -5,6 +5,32 @@ const app = express();
 
 app.use(express.json());
 
+//debug log
+app.use((req, res, next) => {
+
+  console.log("=================================");
+  console.log("Incoming Request");
+  console.log("Time:", new Date().toISOString());
+
+  console.log("Method:", req.method);
+  console.log("URL:", req.originalUrl);
+
+  console.log("Headers:");
+  console.log(req.headers);
+
+  console.log("Query:");
+  console.log(req.query);
+
+  console.log("Body:");
+  console.log(req.body);
+
+  console.log("IP:", req.ip);
+
+  console.log("=================================");
+
+  next();
+});
+
 app.use("/api/surveycake", require("./routes/otp"));
 
 app.listen(process.env.PORT, () => {
