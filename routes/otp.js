@@ -2,8 +2,8 @@ const express = require("express");
 const router = express.Router();
 
 const redis = require("../services/redis");
+const pool = require("../services/postgres");
 const { generateOTP, hashOTP } = require("../utils/otp");
-
 const { cleanPhone, validatePhone } = require("../utils/phone");
 
 // Send OTP
@@ -82,12 +82,29 @@ router.post("/verify-otp", async (req, res) => {
     return res.status(400).json({ msg: "Invalid or expired OTP" });
   }
 
+  // Hash the phone number to check against verified list
+  const phoneHash = hashOTP(phone); //reuse hashotp
+
+  // Check if this phone is already verified (prevent re-verification)
+  const verifiedCheck = await pool.query('SELECT id FROM verified_phone_numbers WHERE phone_hash = $1', [phoneHash]);
+  if (verifiedCheck.rows.length > 0) {
+    return res.status(400).json({ msg: "Phone number already verified" });
+  }
+
   //Verified, delete the OTP from Redis to prevent reuse, and return success response
   //delete both keys to prevent reuse
   const multi = redis.multi();
   multi.del(`otp:${phone}`);
   multi.del(`otpHash:${hashed}`);
   await multi.exec();
+
+  // Insert the phone hash into PostgreSQL to mark as verified
+  try {
+    await pool.query('INSERT INTO verified_phone_numbers (phone_hash) VALUES ($1) ON CONFLICT (phone_hash) DO NOTHING', [phoneHash]);
+  } catch (err) {
+    // Log error but don't fail the response, as verification succeeded
+    console.error('Failed to insert verified phone:', err);
+  }
 
   //status 200, allows customer to proceed with form submission, frontend can use this response to trigger the next step in the flow
   res.status(200).json({ msg: "OTP verified"});

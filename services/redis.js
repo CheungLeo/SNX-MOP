@@ -1,3 +1,6 @@
+/*
+  * This module sets up a connection to a Redis db for storing OTPs and their associated phone numbers temporarily
+*/
 const Redis = require("ioredis");
 
 const redis = new Redis({
