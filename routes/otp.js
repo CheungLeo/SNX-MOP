@@ -4,17 +4,9 @@ const router = express.Router();
 const redis = require("../services/redis");
 const pool = require("../services/postgres");
 const { generateOTP, hashOTP } = require("../utils/otp");
-const { cleanPhone, validatePhone } = require("../utils/phone");
+const { normalizePhone } = require("../utils/phone");
 const messages = require("../config/messages");
 const { sendAccessYouOTP } = require("../services/accessyou");
-
-const normalizePhone = (phone) => {
-  if (typeof phone !== "string") return null;
-  const digits = phone.replace(/\D/g, "");
-  if (/^852\d{8}$/.test(digits)) return digits;
-  if (/^\d{8}$/.test(digits)) return `852${digits}`;
-  return null;
-};
 
 // Send OTP
 router.post("/send-otp", async (req, res) => {
@@ -26,7 +18,7 @@ router.post("/send-otp", async (req, res) => {
   }
 
   const normalized_phone = normalizePhone(phone);
-  if (!normalized_phone || !validatePhone(normalized_phone)) {
+  if (!normalized_phone) {
     return res.status(400).json({ msg: messages.INVALID_PHONE_FORMAT });
   }
 
