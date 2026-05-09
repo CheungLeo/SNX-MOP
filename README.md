@@ -1,140 +1,196 @@
-# OTP Middleware (SurveyCake + AccessYou)
-Note: 
-1. The following guide is LLM-generated, there may be inaccuracies
+# SNX-MOP
 
-# DEPRECIATED
+A lightweight OTP middleware service for integrating SMS verification into external platforms such as SurveyCake.
 
-Readme is currently outdated, docker is implemented so the setup has changed, this readme will be updated soon
+The application provides OTP generation, SMS delivery through AccessYou, Redis-based temporary OTP storage, and PostgreSQL persistence for verified phone numbers.
 
-## System Overview
+This project acts as a secure middleware layer between:
 
-This service provides: - OTP SMS sending via AccessYou API - OTP
-verification for SurveyCake form validation
+- Frontend / form providers (ex: SurveyCake)
+- OTP storage and validation logic
+- SMS delivery provider APIs (AccessYou)
 
-### Architecture
+The service is built with:
 
-    SurveyCake
-       ↓
-    https://yourdomain.com/api/surveycake/*
-       ↓
-    Nginx (reverse proxy)
-       ↓
-    Node.js app (127.0.0.1:3000)
-       ↓
-    Redis (OTP storage)
-       ↓
-    AccessYou SMS API
+- Node.js + Express
+- Redis for temporary OTP storage
+- PostgreSQL for verified phone number persistence
+- Docker / Docker Compose deployment
+- Nginx reverse proxy support
 
-------------------------------------------------------------------------
+# Architecture
 
-# 1. Server Requirements
+## Send OTP Flow
 
-Ubuntu 20.04+ or 22.04
+```text
+SurveyCake / Frontend
+        ↓
+ HTTPS API Request
+        ↓
+Nginx Reverse Proxy
+        ↓
+Node.js Express App
+        ↓
+Redis (Temporary OTP Storage)
+        ↓
+AccessYou SMS API
+```
 
-Must install: - Node.js 20+ - Redis - Nginx - PM2 (process manager) -
-Certbot (for HTTPS)
+## Verify OTP Flow
 
-------------------------------------------------------------------------
+```text
+SurveyCake / Frontend
+        ↓
+ HTTPS API Request
+        ↓
+Nginx Reverse Proxy
+        ↓
+Node.js Express App
+        ↓
+Redis (OTP Validation)
+        ↓
+PostgreSQL (Verified Phone Storage)
+```
 
-# 2. Install Dependencies
+# Requirements
 
-## Node.js
+- Ubuntu 22.04+
+- Docker
+- Docker Compose
+- Nginx
+- Domain name with HTTPS
+- Node.js 20+
+- Redis
+- PostgreSQL
 
-``` bash
+optional:
+- PM2
+
+---
+
+# Quick Start (Docker)
+
+## 1. Clone Repository
+
+```bash
+git clone https://github.com/CheungLeo/SNX-MOP.git
+cd SNX-MOP
+```
+
+---
+
+## 2. Create Environment File
+
+Create a `.env` file:
+
+```env
+PORT=3000
+
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+DATABASE_URL=postgresql://postgres:your_password@postgres:5432/snx_mop
+
+ACCESSYOU_ACCOUNTNO=your_account_number
+ACCESSYOU_USER=your_user
+ACCESSYOU_PWD=your_password
+ACCESSYOU_TID=your_tid
+
+ACCESSYOU_ACCOUNT=your_account
+ACCESSYOU_USER=your_user
+ACCESSYOU_PWD=your_password
+ACCESSYOU_TID=your_tid
+
+```
+
+---
+
+## 3. Start Containers
+
+```bash
+docker compose up -d
+```
+
+Check running containers:
+
+```bash
+docker ps
+```
+
+---
+
+# Quick Start (Manual VPS Setup)
+
+## Install Dependencies
+
+### Node.js
+
+```bash
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 ```
 
-## Redis
+### Redis
 
-``` bash
+```bash
 sudo apt install redis -y
 sudo systemctl enable redis
 sudo systemctl start redis
 ```
 
-## Nginx
+### PM2
 
-``` bash
-sudo apt install nginx -y
-sudo systemctl enable nginx
-sudo systemctl start nginx
-```
-
-## PM2
-
-``` bash
-npm install -g pm2
-```
-
-------------------------------------------------------------------------
-
-# 3. Deploy Application Code
-
-Git clone
-
-------------------------------------------------------------------------
-
-# 4. Install Node dependencies
-
-``` bash
-cd /var/www/otp-middleware
+```bash
 npm install
 ```
 
-------------------------------------------------------------------------
+### PostgreSQL
 
-# 5. Environment Variables
-
-Create `.env`:
-
-``` bash
-PORT=3000
-REDIS_HOST=127.0.0.1
-
-ACCESSYOU_ACCOUNT=xxxxx
-ACCESSYOU_USER=xxxxx
-ACCESSYOU_PWD=xxxxx
-ACCESSYOU_TID=xxxxx
-
-API_KEY=your-secure-api-key
+```bash
+sudo apt install postgresql postgresql-contrib -y
+sudo systemctl enable postgresql
+sudo systemctl start postgresql -g pm2
 ```
 
-------------------------------------------------------------------------
+---
 
-# 6. Start Application
+## Install Project Dependencies
 
-``` bash
-pm2 start app.js --name otp-api
+```bash
+npm install
+```
+
+---
+
+## Start Application
+
+```bash
+pm2 start index.js --name snx-mop
 pm2 save
 pm2 startup
 ```
 
 Check status:
 
-``` bash
+```bash
 pm2 status
 ```
 
-------------------------------------------------------------------------
+---
 
-# 7. Nginx Configuration
+# Nginx Reverse Proxy
 
-``` bash
-sudo nano /etc/nginx/sites-available/otp
-```
+Example configuration:
 
-### Paste:
-
-``` nginx
+```nginx
 server {
     listen 80;
     server_name yourdomain.com;
 
     location /api/ {
         proxy_pass http://127.0.0.1:3000;
-
         proxy_http_version 1.1;
+
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -142,75 +198,257 @@ server {
 }
 ```
 
-Enable:
+Enable configuration:
 
-``` bash
-sudo ln -s /etc/nginx/sites-available/otp /etc/nginx/sites-enabled/
-sudo rm /etc/nginx/sites-enabled/default
+```bash
+sudo ln -s /etc/nginx/sites-available/snx-mop /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-------------------------------------------------------------------------
+---
 
-# 8. Firewall Setup
+# HTTPS Setup
 
-``` bash
-sudo ufw allow 80
-sudo ufw allow 443
-sudo ufw enable
-sudo ufw deny 3000
+Install Certbot:
+
+```bash
+sudo apt install certbot python3-certbot-nginx -y
 ```
 
-------------------------------------------------------------------------
+Generate SSL certificate:
 
-# 9. HTTPS Setup
-
-``` bash
-sudo apt install certbot python3-certbot-nginx -y
+```bash
 sudo certbot --nginx -d yourdomain.com
 ```
 
-------------------------------------------------------------------------
+---
 
-# 10. Public API Endpoints
+# API Endpoints
 
-### Send OTP
+Base route:
 
-    POST https://yourdomain.com/api/surveycake/send-otp
+```text
+/api/surveycake
+```
 
-### Verify OTP
+The application expects SurveyCake-compatible payloads using the `value` field for both phone numbers and OTP values.
 
-    POST https://yourdomain.com/api/surveycake/verify-otp
-
-------------------------------------------------------------------------
-
-# 11. Required Headers
-
-    x-api-key: your-secure-api-key
-    Content-Type: application/json
-
-------------------------------------------------------------------------
-
-# 12. Example Requests
+---
 
 ## Send OTP
 
-``` bash
-curl -X POST https://yourdomain.com/api/surveycake/send-otp   -H "Content-Type: application/json"   -H "x-api-key: your-secure-api-key"   -d '{"phone":"+85291234567"}'
+```http
+POST /api/surveycake/send-otp
 ```
+
+### Example Request
+
+```bash
+curl -X POST https://yourdomain.com/api/surveycake/send-otp \
+-H "Content-Type: application/json" \
+-d '{
+  "value": "91234567"
+
+}'
+```
+
+---
 
 ## Verify OTP
 
-``` bash
-curl -X POST https://yourdomain.com/api/surveycake/verify-otp   -H "Content-Type: application/json"   -H "x-api-key: your-secure-api-key"   -d '{"phone":"+85291234567","otp":"123456"}'
+```http
+POST /api/surveycake/verify-otp
 ```
 
-# Checklist
+### Example Request
 
--   Domain working
--   HTTPS enabled
--   Node running via PM2
--   Redis active
--   Nginx configured
--   Firewall secured
+```bash
+curl -X POST https://yourdomain.com/api/surveycake/verify-otp \
+-H "Content-Type: application/json" \
+-d '{
+  "value": "123456"
+}'
+}'
+```
+
+---
+
+# Phone Number Handling
+
+Accepted phone number formats:
+
+- `91234567`
+- `9123 4567`
+- `85291234567`
+- `+85291234567`
+
+All phone numbers are normalized internally into:
+
+```text
+852XXXXXXXX
+```
+
+---
+
+# OTP Flow
+
+1. User submits phone number
+2. Phone number is normalized and validated
+3. A 6-digit OTP is generated
+4. OTP is SHA256 hashed before storage
+5. OTP is stored in Redis with a 5-minute expiration
+6. SMS is sent through AccessYou API
+7. User submits OTP
+8. OTP is verified against Redis
+9. Verified phone hash is stored in PostgreSQL
+10. Redis OTP entries are deleted
+
+---
+
+# Database Usage
+
+## Redis
+
+Redis is used for:
+
+- Temporary OTP storage with 5-minute expiration
+- OTP expiration handling
+- Fast verification lookups
+
+## PostgreSQL
+
+PostgreSQL is used for:
+
+- Persistent verified phone number storage
+- Verification history
+- Long-term record management
+
+The project uses the `pg` Node.js driver with a PostgreSQL connection URL loaded through the `.env` file.
+
+---
+
+# Suggested Production Setup
+
+Recommended production stack:
+
+- Ubuntu VPS
+- Docker Compose
+- Nginx reverse proxy
+- Cloudflare DNS + SSL
+- Redis persistence enabled
+- PM2 or Docker restart policies
+- Firewall rules for ports 80/443 only
+
+---
+
+# Security Notes
+
+- Never expose Redis publicly
+- Restrict direct access to port 3000
+- Use HTTPS in production
+- Store secrets in `.env`
+- Use fail2ban or rate limiting if publicly exposed
+
+---
+
+# Troubleshooting
+
+## Redis Connection Errors
+
+Check Redis status:
+
+```bash
+sudo systemctl status redis
+```
+
+---
+
+## Application Not Starting
+
+Check logs:
+
+```bash
+pm2 logs
+```
+
+or:
+
+```bash
+docker compose logs -f
+```
+
+---
+
+## 403 / Cloudflare Issues
+
+If requests work locally but fail on VPS:
+
+- Verify Cloudflare firewall settings
+- Check if the API provider blocks datacenter IP ranges
+- Test with curl verbose mode:
+
+```bash
+curl -v https://example.com
+```
+
+---
+
+# Project Structure
+
+```text
+SNX-MOP/
+├── app.js
+├── routes/
+│   └── otp.js
+├── services/
+│   ├── accessyou.js
+│   ├── postgres.js
+│   └── redis.js
+├── utils/
+│   ├── otp.js
+│   └── phone.js
+├── config/
+│   └── messages.js
+├── nginx/
+│   └── default.conf
+├── init.sql
+├── Dockerfile
+├── docker-compose.yml
+└── README.md
+```
+
+---
+
+# Tech Stack
+
+- Express
+- Axios
+- xml2js
+- Axios
+- ioredis
+- pg (node-postgres)
+- PostgreSQL connection URL environment configuration
+- dotenv
+- Docker
+- Nginx
+
+---
+
+# Notes
+
+- REMOVE DEBUG LINES BEFORE DEPLOYING IN PRODUCTION
+- This guide is partly LLM-generated, so beware of inaccuracies
+- Repo still WIP
+
+Source files reviewed for this README include the Express app setup, OTP routes, Redis/PostgreSQL services, phone normalization utilities, AccessYou integration, and Nginx configuration. fileciteturn0file0 fileciteturn0file3
+
+---
+
+# Disclaimer
+
+This project integrates with third-party SMS providers. API behavior, authentication methods, and rate limits may change depending on the provider.
+
+Always test in a staging environment before deploying to production.
+
+
