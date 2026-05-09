@@ -6,7 +6,7 @@ const pool = require("../services/postgres");
 const { generateOTP, hashOTP } = require("../utils/otp");
 const { cleanPhone, validatePhone } = require("../utils/phone");
 const messages = require("../config/messages");
-const { sendAccessYouOTP } = require("./services/accessyou");
+const { sendAccessYouOTP } = require("../services/accessyou");
 
 const normalizePhone = (phone) => {
   if (typeof phone !== "string") return null;
