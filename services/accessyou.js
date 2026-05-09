@@ -4,7 +4,7 @@ const xml2js = require("xml2js");
 async function sendAccessYouOTP(phone, otp) {
 
   const url =
-    `https://otp.accessyou-api.com/sms/sendsms-otp.php` +
+    `https://otp.accessyou-api.com/sendsms-otp.php` +
     `?accountno=${encodeURIComponent(process.env.ACCESSYOU_ACCOUNTNO)}` +
     `&user=${encodeURIComponent(process.env.ACCESSYOU_USER)}` +
     `&pwd=${encodeURIComponent(process.env.ACCESSYOU_PWD)}` +
