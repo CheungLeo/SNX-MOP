@@ -56,7 +56,7 @@ router.post("/send-otp", async (req, res) => {
     });
   }
 
-  res.status(200).json({ msg: messages.OTP_CREATED(otp) });
+  res.status(200).json({ msg: messages.OTP_CREATED});
 });
 
 // Verify OTP
