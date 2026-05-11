@@ -1,5 +1,4 @@
 const axios = require("axios");
-const xml2js = require("xml2js");
 
 async function sendAccessYouOTP(phone, otp) {
 
@@ -16,23 +15,17 @@ async function sendAccessYouOTP(phone, otp) {
 
     const response = await axios.get(url);
 
-    const parsed =
-      await xml2js.parseStringPromise(response.data);
+    console.log("Accessyou response:", response.data);
 
-    const msg =
-      parsed?.xml?.msg?.[0];
-
-    const status =
-      msg?.msg_status?.[0];
-
-    const messageId =
-      msg?.msg_id?.[0];
+    const data = response.data;
 
     return {
-      success: status === "100",
-      status,
-      messageId,
-      raw: parsed
+      success: data.msg_status === "100",
+      status: data.msg_status,
+      statusDescription: data.msg_status_desc,
+      messageId: data.msg_id,
+      phone: data.phoneno,
+      raw: data
     };
 
   } catch (err) {
